@@ -57,7 +57,9 @@ func migrateExportCommand(cmd *cobra.Command, args []string) {
 				return nil, err
 			}
 
+			fmt.Printf("%s", ptr.Oid);
 			downloadPath, err := gitfilter.ObjectPath(ptr.Oid)
+			fmt.Printf("%s", downloadPath);
 			if err != nil {
 				return nil, err
 			}
