@@ -151,7 +151,6 @@ func migrateExportCommand(cmd *cobra.Command, args []string) {
 
 		q.Wait()
 
-		var downloadsCount int32 = 0
 		var errCount int32 = 0
 		for _, err := range q.Errors() {
 			if err != nil {
