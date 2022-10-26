@@ -124,6 +124,7 @@ func migrateExportCommand(cmd *cobra.Command, args []string) {
 	}
 
 	// If we have a valid remote, pre-download all objects using the Transfer Queue
+	var downloadsCount int32 = 0
 	if remoteURL != "" {
 		fmt.Fprintf(os.Stderr, "Download blobs from %s\n", remoteURL)
 		q := newDownloadQueue(getTransferManifestOperationRemote("Download", remote), remote)
@@ -146,13 +147,13 @@ func migrateExportCommand(cmd *cobra.Command, args []string) {
 			}
 		})
 		gs.ScanRefs(opts.Include, opts.Exclude, nil)
+		fmt.Fprintf(os.Stderr,"Total %d downloads equeued\n", downloadsCount)
 
 		q.Wait()
 
 		var downloadsCount int32 = 0
 		var errCount int32 = 0
 		for _, err := range q.Errors() {
-			downloadsCount += 1
 			if err != nil {
 				errCount += 1
 				if !exportIgnoreBroken {
@@ -161,7 +162,7 @@ func migrateExportCommand(cmd *cobra.Command, args []string) {
 				// fmt.Fprintf(os.Stderr, "%s (ignored)\n", err.Error());
 			}
 		}
-		fmt.Fprintf(os.Stderr,"Total: %d downloads, %d with errors\n", downloadsCount, errCount)
+		fmt.Fprintf(os.Stderr,"Total %d errors while downloading\n", errCount)
 	}
 
 	// Perform the rewrite
