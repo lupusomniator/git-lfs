@@ -56,6 +56,7 @@ type RewriteOptions struct {
 	// Verbose mode prints migrated objects.
 	Verbose bool
 
+	DumpBlobs bool
 	// ObjectMapFilePath is the path to the map of old sha1 to new sha1
 	// commits
 	ObjectMapFilePath string

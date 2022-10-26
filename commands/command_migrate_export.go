@@ -44,6 +44,7 @@ func migrateExportCommand(cmd *cobra.Command, args []string) {
 	opts := &githistory.RewriteOptions{
 		Verbose:           migrateVerbose,
 		ObjectMapFilePath: objectMapFilePath,
+		DumpBlobs: exportDumpBlobs,
 		BlobFn: func(path string, b *gitobj.Blob) (*gitobj.Blob, error) {
 			if filepath.Base(path) == ".gitattributes" {
 				return b, nil
@@ -57,10 +58,11 @@ func migrateExportCommand(cmd *cobra.Command, args []string) {
 				return nil, err
 			}
 
-			fmt.Printf("%s", ptr.Oid);
 			downloadPath, err := gitfilter.ObjectPath(ptr.Oid)
-			fmt.Printf("%s", downloadPath);
 			if err != nil {
+				if exportIgnoreBroken {
+					return b, nil
+				}
 				return nil, err
 			}
 
@@ -102,7 +104,7 @@ func migrateExportCommand(cmd *cobra.Command, args []string) {
 			}), nil
 		},
 
-		UpdateRefs: true,
+		UpdateRefs: exportDryRun,
 	}
 
 	setupRepository()
@@ -147,7 +149,7 @@ func migrateExportCommand(cmd *cobra.Command, args []string) {
 		q.Wait()
 
 		for _, err := range q.Errors() {
-			if err != nil {
+			if err != nil && !exportIgnoreBroken {
 				ExitWithError(err)
 			}
 		}
@@ -158,8 +160,8 @@ func migrateExportCommand(cmd *cobra.Command, args []string) {
 		ExitWithError(err)
 	}
 
-	// Only perform `git-checkout(1) -f` if the repository is non-bare.
-	if bare, _ := git.IsBare(); !bare {
+	// Only perform `git-checkout(1) -f` if the repository is non-bare and it's not dry run
+	if bare, _ := git.IsBare(); !bare && !exportDryRun {
 		t := l.Waiter(fmt.Sprintf("migrate: %s", tr.Tr.Get("checkout")))
 		err := git.Checkout("", nil, true)
 		t.Complete()
