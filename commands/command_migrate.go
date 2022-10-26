@@ -405,9 +405,9 @@ func init() {
 	exportCmd.Flags().BoolVar(&migrateVerbose, "verbose", false, "Verbose logging")
 	exportCmd.Flags().StringVar(&objectMapFilePath, "object-map", "", "Object map file")
 	exportCmd.Flags().StringVar(&exportRemote, "remote", "", "Remote from which to download objects")
-	importCmd.Flags().BoolVar(&exportDumpBlobs, "dump-blobs", false, "Print to stdout pairs of replaced blobs")
-	importCmd.Flags().BoolVar(&exportDryRun, "dry-run", false, "Do not nor create commits nor checkout HEAD")
-	importCmd.Flags().BoolVar(&exportIgnoreBroken, "ignore-broken", false, "Ignore broken large files")
+	exportCmd.Flags().BoolVar(&exportDumpBlobs, "dump-blobs", false, "Print to stdout pairs of replaced blobs")
+	exportCmd.Flags().BoolVar(&exportDryRun, "dry-run", false, "Do not nor create commits nor checkout HEAD")
+	exportCmd.Flags().BoolVar(&exportIgnoreBroken, "ignore-broken", false, "Ignore broken large files")
 
 	RegisterCommand("migrate", nil, func(cmd *cobra.Command) {
 		cmd.PersistentFlags().StringVarP(&includeArg, "include", "I", "", "Include a list of paths")
