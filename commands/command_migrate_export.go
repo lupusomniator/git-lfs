@@ -149,8 +149,11 @@ func migrateExportCommand(cmd *cobra.Command, args []string) {
 		q.Wait()
 
 		for _, err := range q.Errors() {
-			if err != nil && !exportIgnoreBroken {
-				ExitWithError(err)
+			if err != nil {
+				if !exportIgnoreBroken {
+					ExitWithError(err)
+				}
+				fmt.Printf("%s (ignored)", err.Error());
 			}
 		}
 	}
