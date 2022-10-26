@@ -1,6 +1,7 @@
 package githistory
 
 import (
+	"bytes"
 	"encoding/hex"
 	"fmt"
 	"io"
@@ -245,7 +246,7 @@ func (r *Rewriter) Rewrite(opt *RewriteOptions) ([]byte, error) {
 		}
 
 		// Rewrite the tree given at that commit.
-		rewrittenTree, err := r.rewriteTree(oid, original.TreeID, "", opt.blobFn(), opt.treePreFn(), opt.treeFn(), vPerc, objectMapFile)
+		rewrittenTree, err := r.rewriteTree(oid, original.TreeID, "", opt.blobFn(), opt.treePreFn(), opt.treeFn(), vPerc, opt.DumpBlobs)
 		if err != nil {
 			return nil, err
 		}
@@ -354,7 +355,7 @@ func (r *Rewriter) Rewrite(opt *RewriteOptions) ([]byte, error) {
 // unable to be rewritten.
 func (r *Rewriter) rewriteTree(commitOID []byte, treeOID []byte, path string,
 	fn BlobRewriteFn, tpfn TreePreCallbackFn, tfn TreeCallbackFn,
-	perc *tasklog.PercentageTask, objectMapFile *os.File) ([]byte, error) {
+	perc *tasklog.PercentageTask, dumpToStdout bool) ([]byte, error) {
 
 	tree, err := r.db.Tree(treeOID)
 	if err != nil {
@@ -396,19 +397,22 @@ func (r *Rewriter) rewriteTree(commitOID []byte, treeOID []byte, path string,
 		switch entry.Type() {
 		case gitobj.BlobObjectType:
 			oid, err = r.rewriteBlob(commitOID, entry.Oid, fullpath, fn, perc)
-			if objectMapFile != nil {
-				if _, err := fmt.Fprintf(objectMapFile, "%x,%x\n", entry.Oid, oid); err != nil {
+		case gitobj.TreeObjectType:
+			oid, err = r.rewriteTree(commitOID, entry.Oid, fullpath, fn, tpfn, tfn, perc, dumpToStdout)
+		default:
+			oid = entry.Oid
+		}
+
+		if err != nil {
+			return nil, err
+		}
+
+		if entry.Type() == gitobj.BlobObjectType {
+			if oid != nil && dumpToStdout && bytes.Compare(oid, entry.Oid) != 0 {
+				if _, err := fmt.Printf("%x %x\n", entry.Oid, oid); err != nil {
 					return nil, err
 				}
 			}
-		case gitobj.TreeObjectType:
-			oid, err = r.rewriteTree(commitOID, entry.Oid, fullpath, fn, tpfn, tfn, perc, objectMapFile)
-		default:
-			oid = entry.Oid
-
-		}
-		if err != nil {
-			return nil, err
 		}
 
 		entries = append(entries, r.cacheEntry(fullpath, entry, &gitobj.TreeEntry{
