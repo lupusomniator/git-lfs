@@ -125,6 +125,7 @@ func migrateExportCommand(cmd *cobra.Command, args []string) {
 
 	// If we have a valid remote, pre-download all objects using the Transfer Queue
 	if remoteURL != "" {
+		fmt.Fprintf(os.Stderr, "Download blobs from %s", remoteURL)
 		q := newDownloadQueue(getTransferManifestOperationRemote("Download", remote), remote)
 		gs := lfs.NewGitScanner(cfg, func(p *lfs.WrappedPointer, err error) {
 			if err != nil {
@@ -148,14 +149,19 @@ func migrateExportCommand(cmd *cobra.Command, args []string) {
 
 		q.Wait()
 
+		var downloadsCount int32 = 0
+		var errCount int32 = 0
 		for _, err := range q.Errors() {
+			downloadsCount += 1
 			if err != nil {
+				errCount += 1
 				if !exportIgnoreBroken {
 					ExitWithError(err)
 				}
-				fmt.Fprintf(os.Stderr, "%s (ignored)", err.Error());
+				fmt.Fprintf(os.Stderr, "%s (ignored)\n", err.Error());
 			}
 		}
+		fmt.Fprintf(os.Stderr,"Total: %d downloads, %d with errors\n", downloadsCount, errCount)
 	}
 
 	// Perform the rewrite
