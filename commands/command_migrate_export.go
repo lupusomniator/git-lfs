@@ -143,6 +143,7 @@ func migrateExportCommand(cmd *cobra.Command, args []string) {
 			}
 
 			if _, err := os.Stat(downloadPath); os.IsNotExist(err) {
+				downloadsCount += 1
 				q.Add(p.Name, downloadPath, p.Oid, p.Size, false, nil)
 			}
 		})
