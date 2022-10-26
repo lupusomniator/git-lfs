@@ -158,7 +158,7 @@ func migrateExportCommand(cmd *cobra.Command, args []string) {
 				if !exportIgnoreBroken {
 					ExitWithError(err)
 				}
-				fmt.Fprintf(os.Stderr, "%s (ignored)\n", err.Error());
+				// fmt.Fprintf(os.Stderr, "%s (ignored)\n", err.Error());
 			}
 		}
 		fmt.Fprintf(os.Stderr,"Total: %d downloads, %d with errors\n", downloadsCount, errCount)
