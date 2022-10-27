@@ -358,13 +358,23 @@ func (r *Rewriter) Rewrite(opt *RewriteOptions) ([]byte, error) {
 func (r *Rewriter) rewriteTree(commitOID []byte, treeOID []byte, path string,
 	fn BlobRewriteFn, tpfn TreePreCallbackFn, tfn TreeCallbackFn,
 	perc *tasklog.PercentageTask, dumpToStdout bool) ([]byte, error) {
+	var strFrom string = string(treeOID[:])
+	var value, ok = cache[strFrom]
+	if ok {
+		if len(value) == 0 {
+			return nil, nil
+		}
+		return []byte(value), nil
+	}
 
 	tree, err := r.db.Tree(treeOID)
 	if err != nil {
+		cache[strFrom] = ""
 		return nil, err
 	}
 
 	if err := tpfn("/"+path, tree); err != nil {
+		cache[strFrom] = ""
 		return nil, err
 	}
 
@@ -406,12 +416,14 @@ func (r *Rewriter) rewriteTree(commitOID []byte, treeOID []byte, path string,
 		}
 
 		if err != nil {
+			cache[strFrom] = ""
 			return nil, err
 		}
 
 		if entry.Type() == gitobj.BlobObjectType {
-			if oid != nil && bytes.Compare(oid, entry.Oid) != 0 {
+			if oid != nil && !bytes.Equal(oid, entry.Oid) {
 				if _, err := fmt.Printf("%x %x\n", entry.Oid, oid); err != nil {
+					cache[strFrom] = ""
 					return nil, err
 				}
 			}
@@ -426,13 +438,19 @@ func (r *Rewriter) rewriteTree(commitOID []byte, treeOID []byte, path string,
 
 	rewritten, err := tfn("/"+path, &gitobj.Tree{Entries: entries})
 	if err != nil {
+		cache[strFrom] = ""
 		return nil, err
 	}
 
 	if tree.Equal(rewritten) {
+		cache[strFrom] = string(treeOID[:])
 		return treeOID, nil
 	}
-	return r.db.WriteTree(rewritten)
+	{
+		var val, err = r.db.WriteTree(rewritten)
+		cache[strFrom] = string(val[:])
+		return val, err
+	}
 }
 
 func copyEntry(e *gitobj.TreeEntry) *gitobj.TreeEntry {
@@ -473,32 +491,20 @@ func (r *Rewriter) allows(typ gitobj.ObjectType, abs string) bool {
 // or an error if either the BlobRewriteFn returned one, or if the object could
 // not be loaded/saved.
 func (r *Rewriter) rewriteBlob(commitOID, from []byte, path string, fn BlobRewriteFn, perc *tasklog.PercentageTask) ([]byte, error) {
-	var strFrom string = string(from[:])
-	var value, ok = cache[strFrom]
-	if ok {
-		if len(value) == 0 {
-			return nil, nil
-		}
-		return []byte(value), nil
-	}
-
 	blob, err := r.db.Blob(from)
 
 	if err != nil {
-		cache[strFrom] = ""
 		return nil, err
 	}
 
 	b, err := fn(path, blob)
 	if err != nil {
-		cache[strFrom] = ""
 		return nil, err
 	}
 
 	if !blob.Equal(b) {
 		sha, err := r.db.WriteBlob(b)
 		if err != nil {
-			cache[strFrom] = ""
 			return nil, err
 		}
 
@@ -510,7 +516,6 @@ func (r *Rewriter) rewriteBlob(commitOID, from []byte, path string, fn BlobRewri
 		// Closing an *os.File twice causes an `os.ErrInvalid` to be
 		// returned.
 		if err = blob.Close(); err != nil {
-			cache[strFrom] = ""
 			return nil, err
 		}
 
@@ -518,17 +523,14 @@ func (r *Rewriter) rewriteBlob(commitOID, from []byte, path string, fn BlobRewri
 			perc.Entry(fmt.Sprintf("migrate: %s", tr.Tr.Get("commit %s: %s", hex.EncodeToString(commitOID), path)))
 		}
 
-		cache[strFrom] = string(sha[:])
 		return sha, nil
 	}
 
 	// Close the source blob, since it is identical to the rewritten blob,
 	// but neither were written.
 	if err := blob.Close(); err != nil {
-		cache[strFrom] = ""
 		return nil, err
 	}
-	cache[strFrom] = strFrom
 	return from, nil
 }
 
