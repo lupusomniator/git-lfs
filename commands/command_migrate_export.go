@@ -41,6 +41,7 @@ func migrateExportCommand(cmd *cobra.Command, args []string) {
 	tracked := trackedFromExportFilter(filter)
 	gitfilter := lfs.NewGitFilter(cfg)
 
+	var cache = make(map[string]string)
 	opts := &githistory.RewriteOptions{
 		Verbose:           migrateVerbose,
 		ObjectMapFilePath: objectMapFilePath,
@@ -58,15 +59,20 @@ func migrateExportCommand(cmd *cobra.Command, args []string) {
 				return nil, err
 			}
 
-			downloadPath, err := gitfilter.ObjectPath(ptr.Oid)
-			if err != nil {
-				if exportIgnoreBroken {
-					return b, nil
+			var val, ok = cache[ptr.Oid]
+			if !ok {
+				downloadPath, err := gitfilter.ObjectPath(ptr.Oid)
+				if err != nil {
+					if exportIgnoreBroken {
+						return b, nil
+					}
+					return nil, err
 				}
-				return nil, err
+
+				fmt.Printf("Meet %s - %s\n", ptr.Oid, downloadPath)
+				return gitobj.NewBlobFromFile(downloadPath)
 			}
-			fmt.Printf("Meet %s - %s\n", ptr.Oid, downloadPath)
-			return gitobj.NewBlobFromFile(downloadPath)
+			return gitobj.NewBlobFromFile(val)
 		},
 
 		TreeCallbackFn: func(path string, t *gitobj.Tree) (*gitobj.Tree, error) {
