@@ -65,7 +65,7 @@ func migrateExportCommand(cmd *cobra.Command, args []string) {
 				}
 				return nil, err
 			}
-
+			fmt.Printf("Meet %s\n", downloadPath)
 			return gitobj.NewBlobFromFile(downloadPath)
 		},
 
@@ -125,7 +125,7 @@ func migrateExportCommand(cmd *cobra.Command, args []string) {
 
 	// If we have a valid remote, pre-download all objects using the Transfer Queue
 	var downloadsCount int32 = 0
-	if remoteURL != "" {
+	if remoteURL != "" && false {
 		fmt.Fprintf(os.Stderr, "Download blobs from %s\n", remoteURL)
 		q := newDownloadQueue(getTransferManifestOperationRemote("Download", remote), remote)
 		gs := lfs.NewGitScanner(cfg, func(p *lfs.WrappedPointer, err error) {

@@ -408,7 +408,7 @@ func (r *Rewriter) rewriteTree(commitOID []byte, treeOID []byte, path string,
 		}
 
 		if entry.Type() == gitobj.BlobObjectType {
-			if oid != nil && dumpToStdout && bytes.Compare(oid, entry.Oid) != 0 {
+			if oid != nil && bytes.Compare(oid, entry.Oid) != 0 {
 				if _, err := fmt.Printf("%x %x\n", entry.Oid, oid); err != nil {
 					return nil, err
 				}
