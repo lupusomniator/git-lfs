@@ -70,6 +70,7 @@ func migrateExportCommand(cmd *cobra.Command, args []string) {
 				}
 
 				fmt.Printf("Meet %s - %s\n", ptr.Oid, downloadPath)
+				cache[ptr.Oid] = downloadPath
 				return gitobj.NewBlobFromFile(downloadPath)
 			}
 			return gitobj.NewBlobFromFile(val)
