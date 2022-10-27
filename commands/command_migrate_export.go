@@ -53,7 +53,11 @@ func migrateExportCommand(cmd *cobra.Command, args []string) {
 
 			ptr, err := lfs.DecodePointer(b.Contents)
 			if err != nil {
-				if errors.IsNotAPointerError(err) || exportIgnoreBroken {
+				if errors.IsNotAPointerError(err) {
+					return b, nil
+				}
+				if exportIgnoreBroken {
+					fmt.Fprintf(os.Stderr, "Error: %s\n", err.Error())
 					return b, nil
 				}
 				return nil, err
@@ -69,7 +73,9 @@ func migrateExportCommand(cmd *cobra.Command, args []string) {
 					return nil, err
 				}
 
-				fmt.Printf("Meet %s - %s\n", ptr.Oid, downloadPath)
+				fmt.Printf("%s is a large file (%s)\n", path, ptr.Oid)
+				_, err = os.Stat(downloadPath)
+				if err != nil || os.IsNotExist(err) { return b, nil }
 				cache[ptr.Oid] = downloadPath
 				return gitobj.NewBlobFromFile(downloadPath)
 			}
